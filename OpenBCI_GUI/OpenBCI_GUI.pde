@@ -1,5 +1,4 @@
-
-///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////// //<>//
 //
 //   GUI for controlling the ADS1299-based OpenBCI
 //
@@ -26,8 +25,9 @@ import processing.serial.*; //for serial communication to Arduino/OpenBCI
 import java.awt.event.*; //to allow for event listener on screen resize
 import netP5.*; //for OSC networking
 import oscP5.*; //for OSC networking
-import hypermedia.net.*; //for UDP networking
+import hypermedia.net.*; // For UDP networking
 import processing.net.*; // For TCP networking
+import edu.ucsd.sccn.*;  // For LSL networking
 import grafica.*;
 import java.lang.reflect.*; // For callbacks
 import java.io.InputStreamReader; // For input
@@ -488,7 +488,7 @@ boolean killRunningprocessWin() {
 int getProcessIdFromLineMac(String line) {
   line = trim(line);
   String[] components = line.split(" ");
-  return Integer.parseInt(components[0]); //<>//
+  return Integer.parseInt(components[0]);
 }
 
 void endProcess(int pid) {
