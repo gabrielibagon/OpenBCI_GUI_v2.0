@@ -10,6 +10,7 @@ boolean hasRepeated = false;
 HashMap<String,float[][]> processed_file;
 HashMap<Integer,String> index_of_times;
 HashMap<String,Integer> index_of_times_rev;
+Boolean newSynthData;
 
 //------------------------------------------------------------------------
 //                       Global Functions
@@ -78,6 +79,7 @@ int getDataIfAvailable(int pointCounter) {
     //has enough time passed?
     int current_millis = millis();
     if (current_millis >= nextPlayback_millis) {
+      newSynthData = true;
       //prepare for next time
       int increment_millis = int(round(float(nPointsPerUpdate)*1000.f/get_fs_Hz_safe())/playback_speed_fac);
       if (nextPlayback_millis < 0) nextPlayback_millis = current_millis;
@@ -109,6 +111,9 @@ int getDataIfAvailable(int pointCounter) {
       //if (eegDataSource==DATASOURCE_PLAYBACKFILE) println("OpenBCI_GUI: getDataIfAvailable: currentTableRowIndex = " + currentTableRowIndex);
       //println("OpenBCI_GUI: getDataIfAvailable: pointCounter = " + pointCounter);
     } // close "has enough time passed"
+    else{
+      newSynthData = false;
+    }
   }
   return pointCounter;
 }
