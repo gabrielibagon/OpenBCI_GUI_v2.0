@@ -22,7 +22,7 @@
 // - set numChan and numBins based on some global variables
 // - find a way to send unfiltered FFT
 // - check if a channel instead of sending inactive array
-// - allow user to select which channels to send
+// - allow user to select which channels to send (UI is left)
 // - add lots of error checking and warnings
 // - test for latency issues
 // - test if you can parse all messages
@@ -51,6 +51,7 @@ class W_networking extends Widget {
   private int sampleNumber = 0;
   private int numChan = 8;
   private int numBins = 125;
+  private String[] activeChans = new String[numChan];
 
   /* Network Objects */
   private OscP5 osc;
@@ -117,8 +118,13 @@ class W_networking extends Widget {
     createTextFields("lsl_aux","openbci_aux",x+w/2, y+h/2+35);
     //General
     //check if channels are active, create string
-    activeChans
-    createTextFields("channels",activeChans,x+w/2,y+h/2+200);
+
+    for(int i = 0;i<8;i++){
+      if(isChannelActive(i)){
+        activeChans[i] = true;
+      }
+    }
+    // createTextFields("channels",activeChans,x+w/2,y+h/2+200);
 
     showTextFields();
 
@@ -137,59 +143,78 @@ class W_networking extends Widget {
   */
   void update(){
     super.update();
+    updateChannelOptions();
     if (isSending && isRunning){
-
-      /* Test to see if new data points have arrived */
-      switch (eegDataSource) {
-        case (DATASOURCE_NORMAL_W_AUX):
-          break;
-        case (DATASOURCE_GANGLION):
-          break;
-        case (DATASOURCE_PLAYBACKFILE):
-        case (DATASOURCE_SYNTHETIC): 
-          if (newSynthData){
-            newData = true;
-          }else{
-            newData = false;
-          }
-          break;
-      }
-      /* Collect the data from global variables */
-      if (newData){
-        if(dataTypeMode==0){
-          /* time series*/
-          if(filtered){
-            for (int chan=0;chan<numChan;chan++){
-              tsDataToSend[chan] = dataBuffY_filtY_uV[chan][0];
-            }
-          }else{
-          /* Time series */
-            if(dataTypeMode==0){
-              for (int chan=0;chan<8;chan++){
-                tsDataToSend[chan] = yLittleBuff_uV[chan][0];
-              }
-            }
-          sendData(tsDataToSend);
-          }
-          /* FFT data */
-        }else{
-          if(filtered){
-            for (int i=0;i<numChan;i++){
-              for (int j=0;j<125;j++){
-                fftDataToSend[i][j] = fftBuff[i].getBand(j);
-              }
-            }
-          }else{
-            // NO UNFILTERED FFT EXISTS!
-            println("Nooo");
-          }
-          sendData(fftDataToSend);
-        }
+      if (checkForData()){
+        toSend = collectData();
+        sendData(toSend);
       }
     }
   }
 
+  void updateChannelOptions(){
+    for(int i = 0;i<8;i++){
+      if(isChannelActive(i)){
+        activeChans[i] = true;
+      }
+    }
+    //WRITE INTO CHANNEL OPTIONS BOX (HOWEVER THIS IS STRUCTURED)
+  }
 
+  void checkForData(){
+    /* Test to see if new data points have arrived */
+    switch (eegDataSource) {
+      case (DATASOURCE_NORMAL_W_AUX):
+        break;
+      case (DATASOURCE_GANGLION):
+        break;
+      case (DATASOURCE_PLAYBACKFILE):
+      case (DATASOURCE_SYNTHETIC): 
+        if (newSynthData){
+          return true;
+        }else{
+          return false;
+        }
+        break;
+    }
+  }
+
+  void collectData(){
+
+    /* Collect the data from global variables */
+    if (newData){
+      if(dataTypeMode==0){
+        /* time series*/
+        if(filtered){
+          for (int chan=0;chan<numChan;chan++){
+            tsDataToSend[chan] = dataBuffY_filtY_uV[chan][0];
+          }
+        }else{
+        /* Time series */
+          if(dataTypeMode==0){
+            for (int chan=0;chan<8;chan++){
+              tsDataToSend[chan] = yLittleBuff_uV[chan][0];
+            }
+          }
+        }
+        return tsDataToSend;
+
+      /* FFT data */
+      }else{
+        if(filtered){
+          for (int i=0;i<numChan;i++){
+            for (int j=0;j<125;j++){
+              fftDataToSend[i][j] = fftBuff[i].getBand(j);
+            }
+          }
+        }else{
+          // NO UNFILTERED FFT EXISTS!
+          println("Nooo");
+        }
+        return fftDataToSend;
+      }
+    }
+  }
   /**
    * @description Send data through the selected protocol
    * @param `dataToSend` {Object} - Data to be sent over the network, either a
@@ -308,7 +333,6 @@ class W_networking extends Widget {
 
     pushStyle();                  // Begin style
     startButton.draw();           // draw button
-
     
     textAlign(LEFT,CENTER);       // Positions the header text
     int title_x0 = x+w/6;         // x0 position of parameter title
