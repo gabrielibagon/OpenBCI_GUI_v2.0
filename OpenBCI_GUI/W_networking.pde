@@ -26,6 +26,11 @@
 // - add lots of error checking and warnings
 // - test for latency issues
 // - test if you can parse all messages
+// - possible to send TS and FFT at the same time?
+// - get args to change when user 
+
+
+// - find if serial needs to be included....
 
 
 
@@ -51,7 +56,7 @@ class W_networking extends Widget {
   private int sampleNumber = 0;
   private int numChan = 8;
   private int numBins = 125;
-  private String[] activeChans = new String[numChan];
+  private Boolean[] activeChans = new Boolean[numChan];
 
   /* Network Objects */
   private OscP5 osc;
@@ -94,7 +99,7 @@ class W_networking extends Widget {
     /* Dropdowns */
     // format -> addDropDown(name,callback_function, options, arg passed)
     addDropdown("Protocol", "Protocol", 
-      Arrays.asList("OSC", "UDP", "LSL", "Serial"), protocolMode);
+      Arrays.asList("OSC", "UDP", "LSL"), protocolMode);
     addDropdown("SendReceive", "S/R", 
       Arrays.asList("Send", "Receive"), sendReceiveMode);
     addDropdown("DataType", "Data Type", 
@@ -145,12 +150,21 @@ class W_networking extends Widget {
     super.update();
     updateChannelOptions();
     if (isSending && isRunning){
-      if (checkForData()){
-        toSend = collectData();
-        sendData(toSend);
+      if (true){
+        if(!initialized){
+          initializeNetwork();
+        }
+        if (dataTypeMode==0){
+          float[] toSend = collectTSData();
+          sendData(toSend);
+        }else{
+          float[][] toSend = collectFFTData();
+          sendData(toSend);
+        }
       }
     }
   }
+
 
   void updateChannelOptions(){
     for(int i = 0;i<8;i++){
@@ -161,7 +175,7 @@ class W_networking extends Widget {
     //WRITE INTO CHANNEL OPTIONS BOX (HOWEVER THIS IS STRUCTURED)
   }
 
-  void checkForData(){
+  Boolean checkForData(){
     /* Test to see if new data points have arrived */
     switch (eegDataSource) {
       case (DATASOURCE_NORMAL_W_AUX):
@@ -175,46 +189,88 @@ class W_networking extends Widget {
         }else{
           return false;
         }
-        break;
     }
+    return false;
   }
 
-  void collectData(){
-
-    /* Collect the data from global variables */
-    if (newData){
-      if(dataTypeMode==0){
-        /* time series*/
-        if(filtered){
-          for (int chan=0;chan<numChan;chan++){
-            tsDataToSend[chan] = dataBuffY_filtY_uV[chan][0];
-          }
-        }else{
-        /* Time series */
-          if(dataTypeMode==0){
-            for (int chan=0;chan<8;chan++){
-              tsDataToSend[chan] = yLittleBuff_uV[chan][0];
-            }
-          }
-        }
-        return tsDataToSend;
-
-      /* FFT data */
-      }else{
-        if(filtered){
-          for (int i=0;i<numChan;i++){
-            for (int j=0;j<125;j++){
-              fftDataToSend[i][j] = fftBuff[i].getBand(j);
-            }
-          }
-        }else{
-          // NO UNFILTERED FFT EXISTS!
-          println("Nooo");
-        }
-        return fftDataToSend;
+  float[] collectTSData(){
+    if(filtered){
+      for (int chan=0;chan<numChan;chan++){
+        tsDataToSend[chan] = dataBuffY_filtY_uV[chan][0];
+      }
+    }else{
+    /* Time series */
+      for (int chan=0;chan<8;chan++){
+        tsDataToSend[chan] = yLittleBuff_uV[chan][0];
       }
     }
+    return tsDataToSend;
   }
+
+  float[][] collectFFTData(){
+    if(filtered){
+      for (int i=0;i<numChan;i++){
+        for (int j=0;j<125;j++){
+          fftDataToSend[i][j] = fftBuff[i].getBand(j);
+        }
+      }
+
+    }else{
+      // NO UNFILTERED FFT EXISTS!
+      println("Nooo");
+    }
+    return fftDataToSend;
+  }
+
+  void initializeNetwork(){
+    if(protocolMode==0){
+      /* Get OSC parameters*/        
+      ip = cp5.get(Textfield.class, "osc_ip").getText();
+      port = Integer.parseInt(cp5.get(Textfield.class, "osc_port").getText());
+      address = cp5.get(Textfield.class, "osc_address").getText();
+      /* Instantiate OSC objects*/                  
+      osc = new OscP5(this,12000);
+      netaddress = new NetAddress(ip,port);
+      initialized=true;
+    }else if (protocolMode==1){
+      /* Get UDP parameters */
+      ip = cp5.get(Textfield.class, "udp_ip").getText();
+      port = Integer.parseInt(cp5.get(Textfield.class, "udp_port").getText());
+      
+      /* Instantiate UDP objects */
+      udp = new UDP(this);
+      udp.setBuffer(1024);
+      udp.log(false);
+      initialized=true;
+    }else if (protocolMode==2){
+      /* Get LSL parameters */
+      data_stream = cp5.get(Textfield.class, "lsl_data").getText();
+      aux_stream = cp5.get(Textfield.class, "lsl_aux").getText();
+      data_stream_id = data_stream + "_id";
+      aux_stream_id = aux_stream + "_id";
+      
+      /* Instantiate LSL objects */
+      info_data = new LSL.StreamInfo(
+                            data_stream, 
+                            "EEG", 
+                            nchan, 
+                            openBCI.get_fs_Hz(), 
+                            LSL.ChannelFormat.float32, 
+                            data_stream_id
+                          );
+      outlet_data = new LSL.StreamOutlet(info_data);
+      info_aux = new LSL.StreamInfo(
+                            aux_stream_id, 
+                            "AUX", 
+                            3, 
+                            openBCI.get_fs_Hz(), 
+                            LSL.ChannelFormat.float32, 
+                            aux_stream_id);
+      outlet_aux = new LSL.StreamOutlet(info_aux);
+      initialized=true;
+      }
+    }
+
   /**
    * @description Send data through the selected protocol
    * @param `dataToSend` {Object} - Data to be sent over the network, either a
@@ -223,104 +279,40 @@ class W_networking extends Widget {
    * NOTE: Consider replacing "Object" parameter with an interface that can handle
    *  multiple types.
    */
-  void sendData(Object dataToSend){
+  void sendData(float[] dataToSend){
     /*OSC*/
-    if(protocolMode==0){
-      /* Initialize OSC */        
-      if(!initialized){
-        /* Get OSC parameters*/        
-        ip = cp5.get(Textfield.class, "osc_ip").getText();
-        port = Integer.parseInt(cp5.get(Textfield.class, "osc_port").getText());
-        address = cp5.get(Textfield.class, "osc_address").getText();
-        /* Instantiate OSC objects*/                  
-        osc = new OscP5(this,12000);
-        netaddress = new NetAddress(ip,port);
-        initialized=true;
-      }
-      /* Send message as object */
+    if (protocolMode==0){
       OscMessage msg = new OscMessage(address);
-
       /* Send time series */
-      if(dataTypeMode==0){
-        msg.add((float[])dataToSend);
-      /* Send FFT */
-      }else if(dataTypeMode==1){
-        float[][] tempDataToSend = (float[][])dataToSend;
-        for(int i=0;i<numChan;i++){
-          msg.add(tempDataToSend[i]);
-        }
+      msg.add(dataToSend);
+      osc.send(msg,netaddress);
+    }else if (protocolMode==1){
+    /* UDP */
+      String msg;
+      msg = Arrays.toString(dataToSend);
+      udp.send(msg,ip,port);
+    }else if (protocolMode==2){
+      outlet_data.push_sample(dataToSend);
+    }
+  }
+
+  void sendData(float[][] dataToSend){
+    if (protocolMode==0){
+      OscMessage msg = new OscMessage(address);
+      for(int i=0;i<numChan;i++){
+        msg.add(dataToSend[i]);
       }
       osc.send(msg,netaddress);
-    
-    /* UDP */
     }else if (protocolMode==1){
-
-      /* Initialize UDP */
-      if(!initialized){
-        
-        /* Get UDP parameters */
-        ip = cp5.get(Textfield.class, "udp_ip").getText();
-        port = Integer.parseInt(cp5.get(Textfield.class, "udp_port").getText());
-        
-        /* Instantiate UDP objects */
-        udp = new UDP(this);
-        udp.setBuffer(1024);
-        udp.log(false);
-        initialized=true;
-      }
-
-      /* Send sample as string through UDP */
       String msg;
-      if(dataTypeMode==0){
-        msg = Arrays.toString((float[])dataToSend);
-      }else{
-        float[][] tempDataToSend = (float[][])dataToSend;
-        StringBuilder sb = new StringBuilder();
-        for(int i=0;i<numChan;i++){
-          sb.append(Arrays.toString(tempDataToSend[i]));
-        }
-        msg = sb.toString();
+      StringBuilder sb = new StringBuilder();
+      for(int i=0;i<numChan;i++){
+        sb.append(Arrays.toString(dataToSend[i]));
       }
+      msg = sb.toString();
       udp.send(msg,ip,port);
-
-    /* LSL */
     }else if (protocolMode==2){
-      
-      /* Initialize LSL */
-      if(!initialized){
-
-        /* Get LSL parameters */
-        data_stream = cp5.get(Textfield.class, "lsl_data").getText();
-        aux_stream = cp5.get(Textfield.class, "lsl_aux").getText();
-        data_stream_id = data_stream + "_id";
-        aux_stream_id = aux_stream + "_id";
-        
-        /* Instantiate LSL objects */
-        info_data = new LSL.StreamInfo(
-                              data_stream, 
-                              "EEG", 
-                              nchan, 
-                              openBCI.get_fs_Hz(), 
-                              LSL.ChannelFormat.float32, 
-                              data_stream_id
-                            );
-        outlet_data = new LSL.StreamOutlet(info_data);
-        info_aux = new LSL.StreamInfo(
-                              aux_stream_id, 
-                              "AUX", 
-                              3, 
-                              openBCI.get_fs_Hz(), 
-                              LSL.ChannelFormat.float32, 
-                              aux_stream_id);
-        outlet_aux = new LSL.StreamOutlet(info_aux);
-        initialized=true;
-      }
-      /* Push sample through LSL */
-      if(dataTypeMode==0){
-        outlet_data.push_sample((float[])dataToSend);
-      }else{
-        outlet_data.push_sample((float[])dataToSend);
-      }
+       // outlet_data.push_sample(dataToSend);
     }
   }
 
@@ -373,12 +365,13 @@ class W_networking extends Widget {
       text("Aux Stream", title_x0, y+h/3+35);
       text("Status:", title_x0, y+h/3+70);
       text(statusText, x+w/2, y+h/3+70);
-    } else if (protocolMode == 3){
-      text("Serial", x+10,y+h/8);
-      textFont(h1,20);
-      text("Status:", title_x0, y+h/3+105);
-      text(statusText, x+w/2, y+h/3+105);
-    }
+    } 
+    // else if (protocolMode == 3){
+    //   text("Serial", x+10,y+h/8);
+    //   textFont(h1,20);
+    //   text("Status:", title_x0, y+h/3+105);
+    //   text(statusText, x+w/2, y+h/3+105);
+    // }
     popStyle();
 
   }
@@ -509,8 +502,8 @@ class W_networking extends Widget {
 void Protocol(int protocolIndex){
   println("Item " + (protocolIndex+1) + " selected from Dropdown 1");
   w_networking.turnOffNetworking();
-  w_networking.showTextFields();
   w_networking.protocolMode = protocolIndex;
+  w_networking.showTextFields();
   closeAllDropdowns();
 }
 
