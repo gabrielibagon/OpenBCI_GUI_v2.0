@@ -421,5 +421,12 @@ void WidgetSelector(int n){
   wm.widgets.get(n).setContainer(theContainer);//map it to the current container
   //set the text of the widgetSelector to the newly selected widget
 
+
+  /* CHECK IF NETWORKING IS ACTIVE */
+  // if(!wm.widgets.get(4).isActive){
+  //   w_networking.protocolMode = -1;
+  // }
+
+
   closeAllDropdowns();
 }

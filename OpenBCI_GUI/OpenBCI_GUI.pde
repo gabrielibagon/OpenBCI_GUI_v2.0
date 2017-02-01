@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////// //<>//
+ /////////////////////////////////////////////////////////////////////////////// //<>//
 //
 //   GUI for controlling the ADS1299-based OpenBCI
 //
@@ -146,15 +146,6 @@ final int OUTPUT_SOURCE_BDF = 2; // The BDF data format http://www.biosemi.com/f
 public int outputDataSource = OUTPUT_SOURCE_ODF;
 // public int outputDataSource = OUTPUT_SOURCE_BDF;
 
-//variables for Networking
-int port = 0;
-String ip = "";
-String address = "";
-String data_stream = "";
-String aux_stream = "";
-UDPSend udp;
-OSCSend osc;
-LSLSend lsl;
 
 // Serial output
 String serial_output_portName = "/dev/tty.usbmodem1411";  //must edit this based on the name of the serial/COM port
