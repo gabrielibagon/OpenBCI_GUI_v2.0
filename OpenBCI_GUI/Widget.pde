@@ -30,6 +30,12 @@ class Widget{
   int widgetSelectorWidth = 160;
   int dropdownWidth = 64;
 
+
+  /* Networking template variables */
+  Boolean newData;
+  Boolean networkingEnabled;
+  Object customData;
+
   CColor dropdownColors = new CColor(); //this is a global CColor that determines the style of all widget dropdowns ... this should go in WidgetManager.pde
 
   Widget(PApplet _parent){
@@ -339,6 +345,16 @@ class Widget{
       return false;
     }
   }
+  Boolean checkNewData(){
+    return false;
+  }
+  void setDataFlag(Boolean b){
+    return;
+  }
+  Object getDataToSend(){
+    Object a = new Object();
+    return a;
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -384,6 +400,7 @@ class NavBarDropdown{
   void mouseReleased(){
 
   }
+
 
   String returnDefaultAsString(){
     String _defaultItem = items.get(defaultItem);

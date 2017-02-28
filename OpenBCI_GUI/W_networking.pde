@@ -56,6 +56,9 @@ class W_networking extends Widget {
   Stream stream2;
   Stream stream3;
 
+  /* Custom Data Types*/
+  Map<String, Widget> customDataTypes = new HashMap<String, Widget>();
+
   W_networking(PApplet _parent){
     super(_parent);
     networkActive = false;
@@ -505,6 +508,14 @@ class W_networking extends Widget {
     turnOffButton();
   }
 
+  void addCustomDataTypes(String dataType, Widget w){
+    Arrays.asList(dataType);
+    customDataTypes.put(dataType,w);
+    cp5_networking.get(ScrollableList.class, "dataType1").addItems(Arrays.asList(dataType));
+    cp5_networking.get(ScrollableList.class, "dataType2").addItems(Arrays.asList(dataType));
+    cp5_networking.get(ScrollableList.class, "dataType3").addItems(Arrays.asList(dataType));
+  }
+
   void initializeStreams(){
     String ip;
     int port;
@@ -517,37 +528,12 @@ class W_networking extends Widget {
     String dt2="None";
     String dt3="None";
     networkActive = true;
-    switch ((int)cp5_networking.get(ScrollableList.class, "dataType1").getValue()){
-      case 0 : dt1 = "None";
-        break;
-      case 1 : dt1 = "TimeSeries";
-        break;
-      case 2 : dt1 = "FFT";
-        break;
-      case 3 : dt1 = "Widget";
-        break;
-    }
-    switch ((int)cp5_networking.get(ScrollableList.class, "dataType2").getValue()){
-      case 0 : dt2 = "None";
-        break;
-      case 1 : dt2 = "TimeSeries";
-        break;
-      case 2 : dt2 = "FFT";
-        break;
-      case 3 : dt2 = "Widget";
-        break;
-    }
-    switch ((int)cp5_networking.get(ScrollableList.class, "dataType3").getValue()){
-      case 0 : dt3 = "None";
-        break;
-      case 1 : dt3 = "TimeSeries";
-        break;
-      case 2 : dt3 = "FFT";
-        break;
-      case 3 : dt3 = "Widget";
-        break;
-    }
-
+    int n = (int)cp5_networking.get(ScrollableList.class, "dataType1").getValue();
+    dt1 = cp5_networking.get(ScrollableList.class, "dataType1").getItem(n).get("name").toString();
+    n = (int)cp5_networking.get(ScrollableList.class, "dataType2").getValue();
+    dt2 = cp5_networking.get(ScrollableList.class, "dataType2").getItem(n).get("name").toString();
+    n = (int)cp5_networking.get(ScrollableList.class, "dataType3").getValue();
+    dt3 = cp5_networking.get(ScrollableList.class, "dataType3").getItem(n).get("name").toString();
     // Establish OSC Streams
     if (protocolMode.equals("OSC")){
       if(!dt1.equals("None")){
@@ -791,8 +777,9 @@ class Stream extends Thread{
                 sendTimeSeriesData();
               }else if (this.dataType.equals("FFT")){
                 sendFFTData();
-              }else if (this.dataType.equals("WIDGET")){
-                sendWidgetData();
+              }else{
+                sendWidgetData(this.dataType);
+                w_networking.customDataTypes.get(dataType).setDataFlag(false);
               }
               newData = false;
             }else{
@@ -818,8 +805,8 @@ class Stream extends Thread{
             sendTimeSeriesData();
           }else if (this.dataType.equals("FFT")){
             sendFFTData();
-          }else if (this.dataType.equals("WIDGET")){
-            sendWidgetData();
+          }else{
+            sendWidgetData(this.dataType);
           }
           newData = false;
         }
@@ -832,10 +819,9 @@ class Stream extends Thread{
       return dataProcessing.newDataToSend;
     }else if (this.dataType.equals("FFT")){
       return dataProcessing.newDataToSend;
-    }else if (this.dataType.equals("WIDGET")){
-      /* ENTER YOUR WIDGET "NEW DATA" RETURN FUNCTION */
+    }else{
+      return isNewData(this.dataType);
     }
-    return false;
   }
 
   /* This method contains all of the policies for sending data types */
@@ -947,7 +933,7 @@ class Stream extends Thread{
        if(filter==0){
           for(int i=0;i<bufferLen;i++){
             for(int j=0;j<numChan;j++){
-              dataToSend[j] = fftBuff[j][i];
+              // dataToSend[j] = fftBuff[j][i];
             }
           outlet_data.push_sample(dataToSend);
           }
@@ -956,8 +942,24 @@ class Stream extends Thread{
     }
   }
 
-  void sendWidgetData(){
+
+
+  void sendWidgetData(String dataType){
     /* INSERT YOUR CODE HERE */
+    /// how to figure out what widget this is from........
+    Widget w = w_networking.customDataTypes.get(dataType);
+    msg.clearArguments();
+    // Object message =
+    msg.add(w.getDataToSend());
+
+    // if (message instanceof String){
+    // }else if (message instanceof f)
+    this.osc.send(msg,this.netaddress);
+  }
+
+  Boolean isNewData(String dataType){
+    return w_networking.customDataTypes.get(dataType).checkNewData();
+
   }
 
   void quit(){
@@ -1050,8 +1052,6 @@ void Protocol(int protocolIndex){
   w_networking.screenResized();
   w_networking.showCP5();
   closeAllDropdowns();
-
-
 }
 
 void dataType1(int n){

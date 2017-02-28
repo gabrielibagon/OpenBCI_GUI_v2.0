@@ -13,20 +13,27 @@ int navHeight = 22;
 
 // MAKE YOUR WIDGET GLOBALLY
 W_timeSeries w_timeSeries;
+W_test w_test;
 W_fft w_fft;
 W_headPlot w_headPlot;
 W_accelerometer w_accelerometer;
 W_networking w_networking;
 W_ganglionImpedance w_ganglionImpedance;
-W_template w_template1;
+// W_template w_template1;
 W_emg w_emg;
 W_openBionics w_openbionics;
+
 
 //ADD YOUR WIDGET TO WIDGETS OF WIDGETMANAGER
 void setupWidgets(PApplet _this, ArrayList<Widget> w){
   w_timeSeries = new W_timeSeries(_this);
   w_timeSeries.setTitle("Time Series");
   addWidget(w_timeSeries, w);
+
+
+  w_test = new W_test(_this);
+  w_test.setTitle("Test");
+  addWidget(w_test, w);
 
   w_fft = new W_fft(_this);
   w_fft.setTitle("FFT Plot");
@@ -55,9 +62,7 @@ void setupWidgets(PApplet _this, ArrayList<Widget> w){
   w_emg.setTitle("EMG");
   addWidget(w_emg, w);
 
-  w_template1 = new W_template(_this);
-  w_template1.setTitle("Widget Template 1");
-  addWidget(w_template1, w);
+
 
   // w_template2 = new W_template(_this);
   // w_template2.setTitle("Widget Template 2");
@@ -99,7 +104,7 @@ class WidgetManager{
   //this holds all of the widgets ... when creating/adding new widgets, we will add them to this ArrayList (below)
   ArrayList<Widget> widgets;
   ArrayList<String> widgetOptions; //List of Widget Titles, used to populate cp5 widgetSelector dropdown of all widgets
-
+  ArrayList<Widget> networkingTypes;
   //Variables for
   int currentContainerLayout; //this is the Layout structure for the main body of the GUI ... refer to [PUT_LINK_HERE] for layouts/numbers image
   ArrayList<Layout> layouts = new ArrayList<Layout>();  //this holds all of the different layouts ...
@@ -115,6 +120,7 @@ class WidgetManager{
     setupLayouts();
     setupWidgets(_this, widgets);
     setupWidgetSelectorDropdowns();
+    setupNetworking(widgets);
 
     if(nchan == 4 && eegDataSource == DATASOURCE_GANGLION){
       currentContainerLayout = 1;
@@ -151,6 +157,13 @@ class WidgetManager{
       }
       println("widgetOptions:");
       println(widgetOptions);
+  }
+
+  void setupNetworking(ArrayList<Widget> widgets){
+
+    if(w_test.networkingEnabled){
+      w_networking.addCustomDataTypes(w_test.dataType1, w_test);
+    }
   }
 
   void update(){
