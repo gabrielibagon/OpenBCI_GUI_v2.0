@@ -13,15 +13,16 @@ int navHeight = 22;
 
 // MAKE YOUR WIDGET GLOBALLY
 W_timeSeries w_timeSeries;
-W_test w_test;
 W_fft w_fft;
 W_headPlot w_headPlot;
 W_accelerometer w_accelerometer;
 W_networking w_networking;
 W_ganglionImpedance w_ganglionImpedance;
-// W_template w_template1;
+W_template w_template1;
 W_emg w_emg;
 W_openBionics w_openbionics;
+W_test w_test;
+
 
 
 //ADD YOUR WIDGET TO WIDGETS OF WIDGETMANAGER
@@ -29,11 +30,6 @@ void setupWidgets(PApplet _this, ArrayList<Widget> w){
   w_timeSeries = new W_timeSeries(_this);
   w_timeSeries.setTitle("Time Series");
   addWidget(w_timeSeries, w);
-
-
-  w_test = new W_test(_this);
-  w_test.setTitle("Test");
-  addWidget(w_test, w);
 
   w_fft = new W_fft(_this);
   w_fft.setTitle("FFT Plot");
@@ -61,6 +57,12 @@ void setupWidgets(PApplet _this, ArrayList<Widget> w){
   w_emg = new W_emg(_this);
   w_emg.setTitle("EMG");
   addWidget(w_emg, w);
+
+
+  w_test = new W_test(_this);
+  w_test.setTitle("Test");
+  addWidget(w_test, w);
+
 
 
 
@@ -162,7 +164,7 @@ class WidgetManager{
   void setupNetworking(ArrayList<Widget> widgets){
 
     if(w_test.networkingEnabled){
-      w_networking.addCustomDataTypes(w_test.dataType1, w_test);
+      w_networking.addCustomDataTypes(w_test.dataTypeName1, w_test);
     }
   }
 
